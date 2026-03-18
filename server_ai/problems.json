@@ -1,0 +1,19 @@
+[
+  {
+    "id": 1,
+    "title": "Two Sum",
+    "difficulty": "Easy",
+    "description": "Given an array of integers `nums` and an integer `target`, return indices of the two numbers such that they add up to `target`.",
+    "starter_code": {
+      "python": "def twoSum(nums, target):\n    # Write your code here\n    pass\n\n# --- Test Driver ---\nif __name__ == '__main__':\n    print(twoSum([2, 7, 11, 15], 9))",
+      "java": "import java.util.Arrays;\n\nclass Solution {\n    public int[] twoSum(int[] nums, int target) {\n        // Write your code here\n        return new int[]{};\n    }\n\n    public static void main(String[] args) {\n        Solution sol = new Solution();\n        int[] result = sol.twoSum(new int[]{2, 7, 11, 15}, 9);\n        System.out.println(Arrays.toString(result));\n    }\n}",
+      "c": "#include <stdio.h>\n#include <stdlib.h>\n\nint* twoSum(int* nums, int numsSize, int target, int* returnSize) {\n    // Write your code here\n    return 0;\n}\n\nint main() {\n    int nums[] = {2, 7, 11, 15};\n    int returnSize;\n    int* result = twoSum(nums, 4, 9, &returnSize);\n    if(result) {\n        printf(\"[%d, %d]\\n\", result[0], result[1]);\n        free(result);\n    }\n    return 0;\n}"
+    },
+    "test_cases": [
+      {
+        "input": "nums = [2,7,11,15]\ntarget = 9",
+        "expected_output": "[0, 1]"
+      }
+    ]
+  }
+]

@@ -1,115 +1,124 @@
+// src/App.tsx
+import React, { useState } from "react";
 import {
   SignedIn,
   SignedOut,
   SignInButton,
   UserButton,
 } from "@clerk/clerk-react";
-import { LiveKitRoom, VideoConference } from "@livekit/components-react";
-import "@livekit/components-styles";
+import Setup from "./pages/Setup";
+import LiveRoom from "./components/interview/LiveRoom";
+import CodingInterview from "./pages/CodingInterview";
 import "./App.css";
 
 // ----------------------------------------------------
-// ⚠️ TEMP: Paste your credentials here for testing
+// ⚠️ TEMP: Your existing credentials
 // ----------------------------------------------------
 const LIVEKIT_URL = "wss://aiinterviewer-w2x9nsez.livekit.cloud";
 const TOKEN =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NzUwNDQ3MTYsImlkZW50aXR5IjoiVGVzdFVzZXIiLCJpc3MiOiJBUElINm5yYVQ1OHluQ3AiLCJuYmYiOjE3NzAwNDQ3MDIsInN1YiI6IlRlc3RVc2VyIiwidmlkZW8iOnsiY2FuUHVibGlzaCI6dHJ1ZSwiY2FuUHVibGlzaERhdGEiOnRydWUsImNhblN1YnNjcmliZSI6dHJ1ZSwicm9vbSI6InRlc3Qtcm9vbSIsInJvb21Kb2luIjp0cnVlfX0.71xke7pRYqj67t75WSlDkLU1Gn_xrYM32LfpYmD-Xqo";
+const HARDCODED_ROOM_NAME = "test-room"; // Matches your token's room access
 // ----------------------------------------------------
 
 export default function App() {
+  const [selectedTrack, setSelectedTrack] = useState<"none" | "hr" | "coding">(
+    "none",
+  );
+  const [isReady, setIsReady] = useState(false);
+
   return (
     <div className="app-shell">
-      {/* ── Header ── */}
-      <header className="app-header">
+      <header
+        className="app-header"
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          padding: "1rem",
+          borderBottom: "1px solid #eaeaea",
+        }}
+      >
         <div className="header-brand">
-          <div className="brand-icon">🎙</div>
-          <span className="brand-name">InterviewAI</span>
-          <span className="brand-badge">Beta</span>
+          <span
+            className="brand-name"
+            style={{ fontWeight: "bold", fontSize: "1.2rem" }}
+          >
+            🎙 InterviewAI
+          </span>
         </div>
-
         <div className="header-right">
           <SignedIn>
-            <span className="status-dot">Live</span>
             <UserButton />
           </SignedIn>
         </div>
       </header>
 
-      {/* ── Main ── */}
       <main className="app-main">
-
-        {/* — Signed-out: Welcome screen — */}
         <SignedOut>
-          <div className="welcome-screen">
-            <div className="welcome-card">
-              <div className="welcome-icon">🤖</div>
-              <h2 className="welcome-title">AI-Powered Interviews</h2>
-              <p className="welcome-subtitle">
-                Practice technical and behavioural interviews with an AI agent
-                that joins your video call in real time.
-              </p>
-
-              <div className="welcome-features">
-                <div className="feature-row">
-                  <span className="feature-icon">📹</span>
-                  Live video with AI interviewer
-                </div>
-                <div className="feature-row">
-                  <span className="feature-icon">💬</span>
-                  Real-time voice &amp; feedback
-                </div>
-                <div className="feature-row">
-                  <span className="feature-icon">📊</span>
-                  Performance analysis after session
-                </div>
-              </div>
-
-              <div className="divider" />
-
-              <SignInButton mode="modal">
-                <button className="btn-primary">
-                  <span>→</span> Sign in to start
-                </button>
-              </SignInButton>
-            </div>
+          <div style={{ textAlign: "center", marginTop: "10vh" }}>
+            <h2>Welcome to AI-Powered Interviews</h2>
+            <SignInButton mode="modal">
+              <button className="btn-primary">Sign in to start</button>
+            </SignInButton>
           </div>
         </SignedOut>
 
-        {/* — Signed-in: Interview room — */}
         <SignedIn>
-          <div className="interview-room">
-            {/* Info bar */}
-            <div className="interview-bar">
-              <div className="bar-item">
-                Session <strong>#T-001</strong>
-              </div>
-              <div className="bar-sep" />
-              <div className="bar-item">
-                Role <strong>Software Engineer</strong>
-              </div>
-              <div className="bar-sep" />
-              <div className="bar-item">
-                Round <strong>Technical</strong>
-              </div>
-              <div className="recording-badge">REC</div>
-            </div>
-
-            {/* LiveKit video */}
-            <div className="livekit-wrapper">
-              <LiveKitRoom
-                video={true}
-                audio={true}
-                token={TOKEN}
-                serverUrl={LIVEKIT_URL}
-                data-lk-theme="default"
-                style={{ height: "100%", width: "100%" }}
+          {/* Step 1: Track Selection */}
+          {selectedTrack === "none" && (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                gap: "2rem",
+                marginTop: "10vh",
+              }}
+            >
+              <button
+                onClick={() => setSelectedTrack("hr")}
+                style={{
+                  padding: "2rem",
+                  border: "1px solid #ccc",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                  fontSize: "1.2rem",
+                }}
               >
-                <VideoConference />
-              </LiveKitRoom>
+                👔 Start HR/Behavioral Track
+              </button>
+              <button
+                onClick={() => setSelectedTrack("coding")}
+                style={{
+                  padding: "2rem",
+                  border: "1px solid #ccc",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                  fontSize: "1.2rem",
+                }}
+              >
+                💻 Start Coding Track
+              </button>
             </div>
-          </div>
-        </SignedIn>
+          )}
 
+          {/* Step 2: Render the chosen track */}
+          {selectedTrack === "hr" && !isReady && (
+            <Setup
+              roomName={HARDCODED_ROOM_NAME}
+              onSetupComplete={() => setIsReady(true)}
+            />
+          )}
+          {selectedTrack === "hr" && isReady && (
+            <LiveRoom url={LIVEKIT_URL} token={TOKEN} />
+          )}
+
+          {selectedTrack === "coding" && (
+            <CodingInterview
+              url={LIVEKIT_URL}
+              token={TOKEN}
+              roomName={HARDCODED_ROOM_NAME}
+            />
+          )}
+        </SignedIn>
       </main>
     </div>
   );

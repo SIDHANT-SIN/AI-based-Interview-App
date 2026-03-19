@@ -8,6 +8,7 @@ from evaluator import generate_evaluation # 🛠️ ADD THIS
 from livekit import rtc, api
 from graph import build_interview_graph
 from state import InterviewState
+from livekit.agents import JobRequest
 
 load_dotenv()
 
@@ -39,10 +40,9 @@ async def interview_timer(session: AgentSession, ctx: JobContext, agent: 'Interv
     # Wait for Viral to finish speaking
     await asyncio.sleep(6) 
     
-    # 🛠️ Generate the HR Evaluation
     print("📝 Sending transcript to the Evaluator...")
-    await generate_evaluation(ctx.room.name, agent.full_transcript)
-    
+    # 🛠️ Added "hr_track"
+    await generate_evaluation(ctx.room.name, "hr_track", agent.full_transcript)
     print("🧹 Backend Authority: Deleting room and kicking user...")
     lkapi = api.LiveKitAPI()
     await lkapi.room.delete_room(api.DeleteRoomRequest(room=ctx.room.name))
@@ -133,8 +133,9 @@ async def entrypoint(ctx: JobContext):
     try:
         with open("database.json", "r") as f:
             db = json.load(f)
-            if room_name in db:
-                dynamic_resume = db[room_name]
+            # 🛠️ Look specifically inside the hr_track bucket!
+            if room_name in db and "hr_track" in db[room_name] and "resume_text" in db[room_name]["hr_track"]:
+                dynamic_resume = db[room_name]["hr_track"]["resume_text"]
                 print(f"📄 Found dynamic resume for room: {room_name}")
             else:
                 print(f"⚠️ No resume found for {room_name}, using default.")
@@ -164,6 +165,18 @@ async def entrypoint(ctx: JobContext):
         room=ctx.room, 
         agent=hr_agent
     )
+    # 🛠️ ADD THIS: Listen for the user closing the tab or clicking End Interview
+    @ctx.room.on("participant_disconnected")
+    def on_participant_disconnected(participant: rtc.RemoteParticipant):
+        print("🚪 User disconnected! Generating summary before shutting down...")
+        
+        # Create a quick wrap-up task so it doesn't shut down before Groq finishes
+        async def wrap_up():
+            # NOTE: Use "coding_track" for the coding_agent.py file!
+            await generate_evaluation(ctx.room.name, "hr_track", hr_agent.full_transcript)
+            ctx.shutdown()
+            
+        asyncio.create_task(wrap_up())
     
     # 🛠️ Pass the agent into the timer!
     asyncio.create_task(interview_timer(session, ctx, hr_agent))
@@ -172,5 +185,3 @@ async def entrypoint(ctx: JobContext):
         instructions="Greet the user warmly, introduce yourself as Viral, and ask them to briefly introduce themselves."
     )
 
-if __name__ == "__main__":
-    cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint))

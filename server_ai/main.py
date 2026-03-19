@@ -1,4 +1,4 @@
-from http.client import HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 import json
 import os
 from fastapi import FastAPI, UploadFile, File, Form
@@ -7,12 +7,17 @@ from pdf_parser import parse_and_summarize_pdf # (This is the script from my pre
 from pydantic import BaseModel
 import random
 from execution_engine import execute_code
+from livekit.api import AccessToken, VideoGrants
 
 # --- New Pydantic Model for the Execution Request ---
 class CodeExecutionRequest(BaseModel):
     source_code: str
     language: str
     room_name: str
+class TokenRequest(BaseModel):
+    room_name: str
+    participant_name: str
+
 app = FastAPI()
 
 # Allow your React frontend to communicate with this API
@@ -41,7 +46,13 @@ async def upload_resume(
     except FileNotFoundError:
         db = {}
 
-    db[room_name] = summary
+    if room_name not in db or not isinstance(db[room_name], dict):
+        db[room_name] = {"hr_track": {}, "coding_track": {}}
+    elif "hr_track" not in db[room_name]:
+        db[room_name]["hr_track"] = {}
+
+    # 2. Save the resume strictly inside the HR bucket
+    db[room_name]["hr_track"]["resume_text"] = summary
 
     with open("database.json", "w") as f:
         json.dump(db, f, indent=4)
@@ -80,10 +91,14 @@ async def execute_user_code(request: CodeExecutionRequest):
     except FileNotFoundError:
         db = {}
         
-    if request.room_name not in db:
-        db[request.room_name] = {}
+    # 1. Initialize the bucket structure if the room is new (or if it's corrupted old string data)
+    if request.room_name not in db or not isinstance(db[request.room_name], dict):
+        db[request.room_name] = {"hr_track": {}, "coding_track": {}}
+    elif "coding_track" not in db[request.room_name]:
+        db[request.room_name]["coding_track"] = {}
         
-    db[request.room_name]["latest_code_execution"] = {
+    # 2. Save the execution strictly inside the Coding bucket
+    db[request.room_name]["coding_track"]["latest_code_execution"] = {
         "code": request.source_code,
         "result": result
     }
@@ -94,13 +109,10 @@ async def execute_user_code(request: CodeExecutionRequest):
     return result
 
 
+# 🛠️ Small update in main.py to handle the new buckets
 @app.get("/api/summary/{room_name}")
 async def get_summary(room_name: str):
-    """
-    The frontend will poll this endpoint. It returns 'processing' while 
-    the LLM thinks, and the final JSON report when it's done.
-    """
-    db_path = "evaluations.json"
+    db_path = "database.json" # 🛠️ Point to the unified db
     
     if not os.path.exists(db_path):
         raise HTTPException(status_code=404, detail="Evaluations database not found.")
@@ -111,9 +123,48 @@ async def get_summary(room_name: str):
     if room_name not in db:
         raise HTTPException(status_code=404, detail="Summary not found for this room.")
         
-    data = db[room_name]
+    room_data = db[room_name]
     
-    if data.get("status") == "processing":
+    # Check if HR just finished
+    if "hr_track" in room_data and "summary_status" in room_data["hr_track"]:
+        track_data = room_data["hr_track"]
+    # Otherwise check if Coding just finished
+    elif "coding_track" in room_data and "summary_status" in room_data["coding_track"]:
+        track_data = room_data["coding_track"]
+    else:
+        raise HTTPException(status_code=404, detail="No summary status found in any track.")
+    
+    if track_data.get("summary_status") == "processing":
         return {"status": "processing"}
         
-    return {"status": "completed", "report": data.get("report")}
+    return {"status": "completed", "report": track_data.get("summary_report")}
+
+
+# --- NEW ROUTE 3: Generate LiveKit Tokens dynamically ---
+@app.post("/api/get-token")
+async def get_token(request: TokenRequest):
+    """Generates a dynamic LiveKit token for a specific room."""
+    
+    # Grab the master keys from your .env file
+    api_key = os.getenv("LIVEKIT_API_KEY")
+    api_secret = os.getenv("LIVEKIT_API_SECRET")
+    
+    if not api_key or not api_secret:
+        raise HTTPException(status_code=500, detail="LiveKit keys are missing on the backend.")
+
+    # 1. Define what permissions this token has (only joining this specific room)
+    grant = VideoGrants(room_join=True, room=request.room_name)
+    
+    # 2. Stamp the new token with your secret keys
+    access_token = AccessToken(api_key, api_secret)
+    access_token.with_identity(request.participant_name)
+    access_token.with_name(request.participant_name)
+    access_token.with_grants(grant)
+    
+    # 3. Convert it into that long gibberish string for the frontend
+    jwt_token = access_token.to_jwt()
+    
+    return {
+        "token": jwt_token, 
+        "url": os.getenv("LIVEKIT_URL", "wss://aiinterviewer-w2x9nsez.livekit.cloud")
+    }

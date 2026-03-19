@@ -1,13 +1,17 @@
 import React from "react";
+import { useNavigate } from "react-router-dom"; // 🛠️ 1. Import Router navigation
 import { LiveKitRoom, VideoConference } from "@livekit/components-react";
 import "@livekit/components-styles";
 
 interface LiveRoomProps {
   url: string;
   token: string;
+  roomName: string; // 🛠️ 2. Add roomName so we know where to navigate!
 }
 
-export default function LiveRoom({ url, token }: LiveRoomProps) {
+export default function LiveRoom({ url, token, roomName }: LiveRoomProps) {
+  const navigate = useNavigate(); // 🛠️ Initialize navigate hook
+
   return (
     <div className="interview-room" style={{ height: "80vh", width: "100%" }}>
       {/* Info bar */}
@@ -40,6 +44,8 @@ export default function LiveRoom({ url, token }: LiveRoomProps) {
           serverUrl={url}
           data-lk-theme="default"
           style={{ height: "100%", width: "100%" }}
+          // 🛠️ 3. THE MAGIC LINE: Triggers instantly when they click Leave OR the timer ends!
+          onDisconnected={() => navigate(`/summary/${roomName}`)}
         >
           <VideoConference />
         </LiveKitRoom>

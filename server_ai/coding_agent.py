@@ -7,6 +7,7 @@ from evaluator import generate_evaluation
 from livekit import rtc, api 
 from livekit.agents import JobContext, WorkerOptions, cli, Agent, AgentSession, llm 
 from livekit.plugins import deepgram, openai, silero
+from livekit.agents import JobRequest
 
 # Import our new graph!
 from coding_graph import build_coding_graph, CodingState
@@ -46,9 +47,7 @@ async def interview_timer(session: AgentSession, ctx: JobContext, agent: 'Coding
     await asyncio.sleep(6) 
     
     print("📝 Sending transcript to the Evaluator...")
-    # 🛠️ Notice we removed asyncio.create_task here for a clean await
-    await generate_evaluation(ctx.room.name, agent.full_transcript)
-    
+    await generate_evaluation(ctx.room.name, "coding_track", agent.full_transcript)
     print("🧹 Backend Authority: Deleting room and kicking user...")
     lkapi = api.LiveKitAPI()
     await lkapi.room.delete_room(api.DeleteRoomRequest(room=ctx.room.name))
@@ -178,7 +177,18 @@ async def entrypoint(ctx: JobContext):
                 prompt = f"The user just ran their code. Terminal output: {message}. Give brief feedback out loud."
                 session.generate_reply(instructions=prompt)
     # ------------------------------------------------------
-
+    # 🛠️ ADD THIS: Listen for the user closing the tab or clicking End Interview
+    @ctx.room.on("participant_disconnected")
+    def on_participant_disconnected(participant: rtc.RemoteParticipant):
+        print("🚪 User disconnected! Generating summary before shutting down...")
+        
+        # Create a quick wrap-up task so it doesn't shut down before Groq finishes
+        async def wrap_up():
+            # NOTE: Use "coding_track" for the coding_agent.py file!
+            await generate_evaluation(ctx.room.name, "coding_track", coding_agent.full_transcript)
+            ctx.shutdown()
+            
+        asyncio.create_task(wrap_up())
     # Start the timer!
     asyncio.create_task(interview_timer(session, ctx, coding_agent))
 
@@ -187,5 +197,3 @@ async def entrypoint(ctx: JobContext):
         instructions="Greet the user as Viral, introduce the problem to them, and ask them to explain their approach."
     )
 
-if __name__ == "__main__":
-    cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint))

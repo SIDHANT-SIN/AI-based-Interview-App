@@ -1,9 +1,11 @@
 // src/components/interview/CodingRoom.tsx
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom"; // 🛠️ 1. Import Router navigation
 import {
   LiveKitRoom,
   VideoConference,
   useLocalParticipant,
+  useRoomContext, // 🛠️ 2. Import room context to manually disconnect
 } from "@livekit/components-react";
 import "@livekit/components-styles";
 import CodeEditor from "../ui/CodeEditor";
@@ -26,6 +28,9 @@ function CodingWorkspace({
   roomName: string;
 }) {
   const { localParticipant } = useLocalParticipant();
+  const room = useRoomContext(); // 🛠️ Grab the current room instance
+  const navigate = useNavigate(); // 🛠️ Initialize navigate
+
   const [code, setCode] = useState(problem.starter_code?.python || "");
   const [language, setLanguage] = useState("python");
   const [terminalStatus, setTerminalStatus] = useState<TerminalStatus>("idle");
@@ -42,17 +47,14 @@ function CodingWorkspace({
       setTerminalOutput(result.output || "No output returned.");
 
       // 2. The Hidden Whisper (Only if they clicked "Submit")
-      // 2. The Hidden Whisper (Only if they clicked "Submit")
       if (isSubmit && localParticipant) {
-        // Create a JSON payload containing the identifier, the user's code, and the output
         const payload = JSON.stringify({
           type: "EXECUTION_RESULT",
-          code: code, // This grabs the current code from your React state
+          code: code, 
           output: result.output || "No output returned.",
         });
 
         const encoder = new TextEncoder();
-        // Send the JSON packet directly to Viral over LiveKit
         localParticipant.publishData(encoder.encode(payload), {
           reliable: true,
         });
@@ -64,6 +66,14 @@ function CodingWorkspace({
       setTerminalStatus("error");
       setTerminalOutput("Failed to connect to execution server.");
     }
+  };
+
+  // 🛠️ 3. The End Interview Logic
+  const handleEndInterview = async () => {
+    // Tell LiveKit to drop the connection. This triggers the backend listener!
+    await room.disconnect(); 
+    // Instantly navigate to the loading/summary screen
+    navigate(`/summary/${roomName}`);
   };
 
   return (
@@ -90,14 +100,13 @@ function CodingWorkspace({
           style={{
             flex: 1,
             backgroundColor: "white",
-            color: "#1a1a1a", // 🛠️ Added: Ensures text is not white
+            color: "#1a1a1a",
             padding: "1.5rem",
             borderRadius: "8px",
             overflowY: "auto",
             boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
           }}
         >
-          {/* 🛠️ Added '?' safety checks below */}
           <h2 style={{ color: "#000" }}>
             {problem?.title || "Loading Title..."}
           </h2>
@@ -156,7 +165,6 @@ function CodingWorkspace({
             onChange={(e) => {
               const lang = e.target.value;
               setLanguage(lang);
-              // 🛠️ Added safety check for starter_code
               setCode(problem?.starter_code?.[lang] || "");
             }}
             style={{
@@ -172,6 +180,22 @@ function CodingWorkspace({
           </select>
 
           <div style={{ display: "flex", gap: "0.5rem" }}>
+            {/* 🛠️ 4. The New End Interview Button */}
+            <button
+              onClick={handleEndInterview}
+              style={{
+                padding: "0.5rem 1rem",
+                backgroundColor: "#dc3545", // Red color for 'End'
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+                fontWeight: "bold",
+                marginRight: "1rem", // Give it a little space from the run buttons
+              }}
+            >
+              End Interview
+            </button>
             <button
               onClick={() => runCodeLogic(false)}
               style={{
@@ -220,12 +244,15 @@ function CodingWorkspace({
 }
 
 // --- THE OUTER WRAPPER ---
+// 🛠️ 5. Added the onDisconnected hook here too, just in case they click the built-in red phone button inside <VideoConference />
 export default function CodingRoom({
   url,
   token,
   problem,
   roomName,
 }: CodingRoomProps) {
+  const navigate = useNavigate();
+
   return (
     <LiveKitRoom
       video={true}
@@ -234,6 +261,7 @@ export default function CodingRoom({
       serverUrl={url}
       data-lk-theme="default"
       style={{ height: "100%", width: "100%" }}
+      onDisconnected={() => navigate(`/summary/${roomName}`)}
     >
       <CodingWorkspace problem={problem} roomName={roomName} />
     </LiveKitRoom>

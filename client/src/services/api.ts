@@ -59,3 +59,38 @@ export const executeUserCode = async (
     throw error;
   }
 };
+export const fetchSummary = async (roomName: string) => {
+  // Replace localhost with your production URL later
+  const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+
+  const response = await fetch(`${API_BASE_URL}/api/summary/${roomName}`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch summary: ${response.status}`);
+  }
+
+  return await response.json();
+};
+
+// 🛠️ ADD THIS to your api.ts file
+export const fetchLiveKitToken = async (
+  roomName: string,
+  participantName: string = "Candidate",
+) => {
+  const response = await fetch("http://localhost:8000/api/get-token", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      room_name: roomName,
+      participant_name: participantName,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch LiveKit token");
+  }
+
+  return response.json(); // Returns { token: "...", url: "..." }
+};

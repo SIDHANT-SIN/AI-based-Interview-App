@@ -1,6 +1,0 @@
-1.log-in using clerk
-2.upload resume(data stored using fast)
-3.join the interviews(behavioral and managerial)
-4.generates meet id
-5.both interviewee and ai join(Listen to whatever he says throughout the meeting and just store it in a text format)
-6.shows the transcript

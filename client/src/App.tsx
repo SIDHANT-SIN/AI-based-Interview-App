@@ -1,214 +1,167 @@
 // src/App.tsx
-import React from "react";
-import { Routes, Route, useNavigate, useParams } from "react-router-dom"; // 🛠️ Added useParams
+import React, { useState } from "react";
+import { Routes, Route, useNavigate, Navigate } from "react-router-dom";
 import {
   SignedIn,
   SignedOut,
-  SignInButton,
+  RedirectToSignIn,
   UserButton,
-  useUser,
 } from "@clerk/clerk-react";
-import { useEffect, useState } from "react";
-import Setup from "./pages/Setup";
-import LiveRoom from "./components/interview/LiveRoom";
-import CodingInterview from "./pages/CodingInterview";
-import InterviewSummary from "./pages/InterviewSummary";
-import "./App.css";
-import { fetchLiveKitToken } from "./services/api";
-const LIVEKIT_URL = "wss://aiinterviewer-w2x9nsez.livekit.cloud";
-const TOKEN =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NzUwNDQ3MTYsImlkZW50aXR5IjoiVGVzdFVzZXIiLCJpc3MiOiJBUElINm5yYVQ1OHluQ3AiLCJuYmYiOjE3NzAwNDQ3MDIsInN1YiI6IlRlc3RVc2VyIiwidmlkZW8iOnsiY2FuUHVibGlzaCI6dHJ1ZSwiY2FuUHVibGlzaERhdGEiOnRydWUsImNhblN1YnNjcmliZSI6dHJ1ZSwicm9vbSI6InRlc3Qtcm9vbSIsInJvb21Kb2luIjp0cnVlfX0.71xke7pRYqj67t75WSlDkLU1Gn_xrYM32LfpYmD-Xqo";
 
-// 🛠️ 1. Helper function to generate a unique 6-character room ID
-// 🛠️ Updated to accept a prefix
-const generateRoomId = (prefix: string) =>
-  `${prefix}-${Math.random().toString(36).substring(2, 8)}`;
+import SignInPage from "./pages/SignInPage";
+import SignUpPage from "./pages/SignUpPage";
+import MainMenuPage from "./pages/MainMenuPage";
+import ResumeUploadPage from "./pages/ResumeUploadPage";
+import HRInterviewPage from "./pages/HRInterviewPage";
+import CodingInterviewPage from "./pages/CodingInterviewPage";
+import SummaryPage from "./pages/SummaryPage";
+import HistoryPage from "./pages/HistoryPage";
+import LobbyPage from "./pages/LobbyPage";
+import "./index.css";
 
-// 🛠️ 2. Main Menu now generates IDs before navigating
-function MainMenu() {
+/* ─────────────────────────────────────────────────────────────
+   HEADER — shown on every page
+───────────────────────────────────────────────────────────── */
+function AppHeader() {
   const navigate = useNavigate();
-
-  const startHR = () => {
-    const uniqueId = generateRoomId("hr-room");
-    navigate(`/setup/hr/${uniqueId}`);
-  };
-
-  const startCoding = () => {
-    const uniqueId = generateRoomId("coding-room");
-    navigate(`/interview/coding/${uniqueId}`);
-  };
+  const [hovered, setHovered] = useState(false);
 
   return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "center",
-        gap: "2rem",
-        marginTop: "10vh",
-      }}
-    >
+    <header className="sticky top-0 z-50 flex items-center justify-between px-4 sm:px-8 h-14 sm:h-16 bg-[#0b0e1a]/85 backdrop-blur-md border-b border-app-border shrink-0">
+      {/* Brand Button */}
       <button
-        onClick={startHR}
-        style={{
-          padding: "2rem",
-          border: "1px solid #ccc",
-          borderRadius: "8px",
-          cursor: "pointer",
-          fontSize: "1.2rem",
-        }}
+        onClick={() => navigate("/")}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        className={`flex items-center gap-2 bg-transparent border-none cursor-pointer p-0 transition-opacity duration-150 ${hovered ? "opacity-80" : "opacity-100"
+          }`}
       >
-        👔 Start HR/Behavioral Track
+        <span className="text-xl sm:text-2xl">🎙</span>
+        <span className="font-orbitron font-bold text-[0.95rem] sm:text-[1.1rem] text-white tracking-tight">
+          HireGraph
+        </span>
+        <span className="font-dm text-[10px] font-bold text-app-lime bg-app-lime/10 border border-app-lime/30 rounded-full px-2 py-0.5 uppercase tracking-wider">
+          Beta
+        </span>
       </button>
-      <button
-        onClick={startCoding}
-        style={{
-          padding: "2rem",
-          border: "1px solid #ccc",
-          borderRadius: "8px",
-          cursor: "pointer",
-          fontSize: "1.2rem",
-        }}
-      >
-        💻 Start Coding Track
-      </button>
-    </div>
-  );
-}
 
-// 🛠️ 3. Wrapper Components: These grab the ID from the URL and pass it to your existing pages
-function SetupWrapper() {
-  const { roomName } = useParams<{ roomName: string }>();
-  return <Setup roomName={roomName!} />;
-}
-
-// 🛠️ Updated LiveRoomWrapper
-function LiveRoomWrapper() {
-  const { roomName } = useParams<{ roomName: string }>();
-  const { user } = useUser(); // Grab the logged-in user's name
-  const [connection, setConnection] = useState<{
-    url: string;
-    token: string;
-  } | null>(null);
-
-  useEffect(() => {
-    const getToken = async () => {
-      const name = user?.firstName || "Candidate";
-      const data = await fetchLiveKitToken(roomName!, name);
-      setConnection(data);
-    };
-    getToken();
-  }, [roomName, user]);
-
-  if (!connection)
-    return (
-      <div style={{ textAlign: "center", marginTop: "20vh" }}>
-        <h2>Connecting to secure room...</h2>
-      </div>
-    );
-
-  return (
-    <LiveRoom
-      url={connection.url}
-      token={connection.token}
-      roomName={roomName!}
-    />
-  );
-}
-
-// 🛠️ Updated CodingWrapper
-function CodingWrapper() {
-  const { roomName } = useParams<{ roomName: string }>();
-  const { user } = useUser();
-  const [connection, setConnection] = useState<{
-    url: string;
-    token: string;
-  } | null>(null);
-
-  useEffect(() => {
-    const getToken = async () => {
-      const name = user?.firstName || "Candidate";
-      const data = await fetchLiveKitToken(roomName!, name);
-      setConnection(data);
-    };
-    getToken();
-  }, [roomName, user]);
-
-  if (!connection)
-    return (
-      <div style={{ textAlign: "center", marginTop: "20vh" }}>
-        <h2>Connecting to secure code environment...</h2>
-      </div>
-    );
-
-  return (
-    <CodingInterview
-      url={connection.url}
-      token={connection.token}
-      roomName={roomName!}
-    />
-  );
-}
-
-export default function App() {
-  const navigate = useNavigate();
-
-  return (
-    <div className="app-shell">
-      <header
-        className="app-header"
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          padding: "1rem",
-          borderBottom: "1px solid #eaeaea",
-        }}
-      >
-        <div className="header-brand">
-          <span
-            className="brand-name"
-            style={{
-              fontWeight: "bold",
-              fontSize: "1.2rem",
-              cursor: "pointer",
-            }}
-            onClick={() => navigate("/")}
-          >
-            🎙 InterviewAI
-          </span>
-        </div>
-        <div className="header-right">
-          <SignedIn>
-            <UserButton />
-          </SignedIn>
-        </div>
-      </header>
-
-      <main className="app-main">
-        <SignedOut>
-          <div style={{ textAlign: "center", marginTop: "10vh" }}>
-            <h2>Welcome to AI-Powered Interviews</h2>
-            <SignInButton mode="modal">
-              <button className="btn-primary">Sign in to start</button>
-            </SignInButton>
-          </div>
-        </SignedOut>
-
+      {/* Right side */}
+      <div className="flex items-center gap-2 sm:gap-4">
         <SignedIn>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-app-lime/10 border border-app-lime/30">
+            <span className="w-1.5 h-1.5 rounded-full bg-app-lime animate-pulse" />
+            <span className="font-dm text-[11px] font-semibold text-app-lime tracking-wide uppercase">
+              Live
+            </span>
+          </div>
+          <UserButton />
+        </SignedIn>
+      </div>
+    </header>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   PROTECTED ROUTE WRAPPER
+───────────────────────────────────────────────────────────── */
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <SignedIn>{children}</SignedIn>
+      <SignedOut>
+        <RedirectToSignIn />
+      </SignedOut>
+    </>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   APP
+───────────────────────────────────────────────────────────── */
+export default function App() {
+  return (
+    <div className="relative flex flex-col min-h-screen w-full overflow-hidden bg-app-bg text-white font-dm">
+      {/* Global Grid Background */}
+      <div
+        className="fixed inset-0 pointer-events-none z-0"
+        style={{
+          backgroundImage: `
+          linear-gradient(rgba(163,255,60,0.08) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(163,255,60,0.08) 1px, transparent 1px)
+        `,
+          backgroundSize: "40px 40px",
+        }}
+      />
+
+      {/* Global Ambient Glow Blobs */}
+      <div className="fixed top-[-60px] right-[-60px] w-[400px] h-[400px] rounded-full opacity-20 blur-[80px] bg-app-lime pointer-events-none z-0" />
+      <div className="fixed bottom-[-40px] left-[-40px] w-[300px] h-[300px] rounded-full opacity-20 blur-[80px] bg-app-coral pointer-events-none z-0" />
+      {/* Main Content Wrapper - positioned above the background */}
+      <div className="relative z-10 flex flex-col flex-1">
+        <AppHeader />
+
+        <main className="flex-1 flex flex-col w-full min-h-0">
           <Routes>
-            <Route path="/" element={<MainMenu />} />
-            <Route path="/setup/hr/:roomName" element={<SetupWrapper />} />
+            {/* ── Public auth routes ── */}
+            <Route path="/sign-in/*" element={<SignInPage />} />
+            <Route path="/sign-up/*" element={<SignUpPage />} />
+
+            {/* ── Protected routes ── */}
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <MainMenuPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/setup/hr"
+              element={
+                <ProtectedRoute>
+                  <ResumeUploadPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/lobby/:roomName" element={<LobbyPage />} />
             <Route
               path="/interview/hr/:roomName"
-              element={<LiveRoomWrapper />}
+              element={
+                <ProtectedRoute>
+                  <HRInterviewPage />
+                </ProtectedRoute>
+              }
             />
             <Route
               path="/interview/coding/:roomName"
-              element={<CodingWrapper />}
+              element={
+                <ProtectedRoute>
+                  <CodingInterviewPage />
+                </ProtectedRoute>
+              }
             />
-            <Route path="/summary/:roomName" element={<InterviewSummary />} />
+            <Route
+              path="/summary/:roomName"
+              element={
+                <ProtectedRoute>
+                  <SummaryPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/history"
+              element={
+                <ProtectedRoute>
+                  <HistoryPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* ── Fallback — redirect anything unknown to home ── */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </SignedIn>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }

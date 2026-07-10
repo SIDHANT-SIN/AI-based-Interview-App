@@ -78,7 +78,6 @@ def execute_code(source_code: str, language: str):
     payload = {
         "lang": language.lower(),
         "code": normalized_code,
-        "question_id": "2_sum",   # hardcoded for now, matches current Go server
         "problem_id": "2_sum",    # compatibility fallback key
     }
     
@@ -88,10 +87,10 @@ def execute_code(source_code: str, language: str):
         "Accept": "*/*",
     }
     
-    print(f"📡 Sending payload to executor ({EXECUTOR_URL}/judge): {payload}")
+    print(f"📡 Sending payload to executor ({EXECUTOR_URL}/execute): {payload}")
     
     try:
-        response = requests.post(f"{EXECUTOR_URL}/judge", json=payload, headers=headers, timeout=15)
+        response = requests.post(f"{EXECUTOR_URL}/execute", json=payload, headers=headers, timeout=40)
         result = response.json()
 
         if response.status_code == 200 and result.get("status") == "success":

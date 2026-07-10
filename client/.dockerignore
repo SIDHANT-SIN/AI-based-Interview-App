@@ -1,0 +1,18 @@
+# client/.dockerignore
+
+# Dependency directories
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Build output
+dist/
+build/
+
+# Environment variables (Security)
+.env
+.env.local
+
+# Git and OS files
+.git
+.DS_Store

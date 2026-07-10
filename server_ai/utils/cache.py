@@ -21,7 +21,13 @@ async def connect_to_redis():
     try:
         # decode_responses=True is a massive time-saver. 
         # It automatically converts Redis bytes into clean Python strings!
-        _redis_client = redis.from_url(redis_url, decode_responses=True)
+        _redis_client = redis.from_url(
+            redis_url,
+            decode_responses=True,
+            socket_connect_timeout=15, # Increased from 5s: Upstash free tier databases pause when inactive and take time to wake up!
+            socket_timeout=15,         # Increased to give enough time for cold starts
+            socket_keepalive=True,     # Keeps the connection from dropping randomly
+        )
         
         # Ping the server to verify the connection works
         await _redis_client.ping()

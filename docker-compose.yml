@@ -1,0 +1,47 @@
+
+services:
+
+  api:
+    build:
+      context: ./server_ai
+      dockerfile: Dockerfile
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./server_ai/.env
+    networks:
+      - default
+      - secure_net
+    restart: unless-stopped
+
+  agent:
+    build:
+      context: ./server_ai
+      dockerfile: Dockerfile
+    command: python -m agents.main_agent start
+    env_file:
+      - ./server_ai/.env
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+      args:
+        VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY}
+        VITE_API_URL: ${VITE_API_URL}
+    env_file:
+        - ./client/.env
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+networks:
+  secure_net:
+    external: true
+    name: interview_tier_network

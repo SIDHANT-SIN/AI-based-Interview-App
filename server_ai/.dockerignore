@@ -1,0 +1,22 @@
+# server_ai/.dockerignore
+
+# Python virtual environment
+venv/
+env/
+.venv/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment variables (Security)
+.env
+
+# Logs and databases
+*.log
+*.sqlite3
+
+# Git and OS files
+.git
+.DS_Store

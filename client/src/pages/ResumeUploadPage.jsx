@@ -50,7 +50,7 @@ export default function ResumeUploadPage() {
     <div className="w-full flex-1 flex items-center justify-center bg-transparent px-4 py-8 sm:py-12 box-border">
       
       {/* Main Card */}
-      <div className="relative z-10 w-full max-w-[520px] bg-white/[0.02] border border-white/10 rounded-2xl p-6 sm:p-10 flex flex-col gap-6 shadow-[0_8px_30px_rgba(0,0,0,0.3)] backdrop-blur-sm">
+      <div className="relative z-10 w-full max-w-130 bg-white/2 border border-white/10 rounded-2xl p-6 sm:p-10 flex flex-col gap-6 shadow-[0_8px_30px_rgba(0,0,0,0.3)] backdrop-blur-sm">
         
         {/* Step badge */}
         <span className="self-start font-orbitron text-[9px] font-bold uppercase tracking-widest text-app-lime bg-app-lime/10 border border-app-lime/30 rounded-md px-3 py-1">
@@ -74,10 +74,10 @@ export default function ResumeUploadPage() {
           onClick={() => document.getElementById("resume-upload")?.click()}
           className={`
             relative rounded-xl border border-dashed cursor-pointer transition-all duration-300
-            flex flex-col items-center justify-center p-8 min-h-[140px] group
+            flex flex-col items-center justify-center p-8 min-h-35 group
             ${file 
-              ? "border-app-lime/50 bg-app-lime/[0.05]" 
-              : "border-white/20 bg-white/[0.02] hover:border-app-lime/40 hover:bg-white/[0.04]"
+              ? "border-app-lime/50 bg-app-lime/5" 
+              : "border-white/20 bg-white/2 hover:border-app-lime/40 hover:bg-white/4"
             }
           `}
         >
@@ -102,13 +102,13 @@ export default function ResumeUploadPage() {
                   {(file.size / 1024).toFixed(0)} KB · PDF
                 </span>
               </div>
-              <div className="w-8 h-8 rounded-full bg-app-lime text-[#0b0e1a] flex items-center justify-center font-bold text-sm shrink-0 shadow-[0_0_15px_rgba(163,255,60,0.4)]">
+              <div className="w-8 h-8 rounded-full bg-app-lime text-app-bg flex items-center justify-center font-bold text-sm shrink-0 shadow-[0_0_15px_rgba(163,255,60,0.4)]">
                 ✓
               </div>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-2 text-center">
-              <div className="w-12 h-12 rounded-lg bg-white/[0.04] border border-white/10 flex items-center justify-center text-2xl mb-2 transition-transform duration-300 group-hover:-translate-y-1 group-hover:border-app-lime/30">
+              <div className="w-12 h-12 rounded-lg bg-white/4 border border-white/10 flex items-center justify-center text-2xl mb-2 transition-transform duration-300 group-hover:-translate-y-1 group-hover:border-app-lime/30">
                 📁
               </div>
               <p className="font-dm text-sm font-medium text-white m-0">
@@ -138,7 +138,7 @@ export default function ResumeUploadPage() {
           ].map(({ icon, label }) => (
             <div
               key={label}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white/[0.03] border border-white/10"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white/3 border border-white/10"
             >
               <span className="text-sm">{icon}</span>
               <span className="font-orbitron text-[9px] uppercase tracking-widest text-white/50 whitespace-nowrap font-bold">
@@ -152,11 +152,11 @@ export default function ResumeUploadPage() {
         <button
           onClick={handleStartInterview}
           disabled={!file || isUploading}
-          className="w-full py-4 mt-2 bg-app-lime hover:bg-[#b8ff5c] active:scale-[0.98] text-[#0b0e1a] font-orbitron text-xs font-bold tracking-[0.15em] uppercase rounded-lg transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(163,255,60,0.15)] disabled:shadow-none"
+          className="w-full py-4 mt-2 bg-app-lime hover:bg-[#b8ff5c] active:scale-[0.98] text-app-bg font-orbitron text-xs font-bold tracking-[0.15em] uppercase rounded-lg transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(163,255,60,0.15)] disabled:shadow-none"
         >
           {isUploading ? (
             <span className="flex items-center justify-center gap-3">
-              <span className="inline-block w-4 h-4 rounded-full border-2 border-[#0b0e1a]/30 border-t-[#0b0e1a] animate-spin" />
+              <span className="inline-block w-4 h-4 rounded-full border-2 border-app-bg/30 border-t-app-bg animate-spin" />
               Parsing Document...
             </span>
           ) : (
